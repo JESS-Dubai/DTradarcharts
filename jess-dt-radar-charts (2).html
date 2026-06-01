@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JESS Design & Technology — Student Progress Radar Charts</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700&family=Barlow:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #001a3d;
+    --surface: #002454;
+    --surface2: #002e6b;
+    --surface3: #003580;
+    --border: #004099;
+    --border2: #0050bb;
+    --text: #ffffff;
+    --text2: #a8c4e8;
+    --text3: #5580aa;
+    --accent: #FFD100;
+    --accent2: #c9a400;
+    --accent-dim: rgba(255,209,0,0.12);
+    --danger: #ff6b6b;
+    --success: #5ec47a;
+    --chart-fill: rgba(255,209,0,0.18);
+    --chart-stroke: #FFD100;
+    --grid: rgba(255,255,255,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo-wrap {
+    height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  .logo-wrap img {
+    height: 48px;
+    width: auto;
+    
+  }
+
+  .header-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border2);
+  }
+
+  .header-title {
+    flex: 1;
+  }
+
+  .header-title h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .header-title p {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 40px;
+  }
+
+  /* Upload Zone */
+  .upload-section {
+    margin-bottom: 40px;
+  }
+
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 48px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .upload-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 16px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .upload-icon svg { color: var(--accent); }
+
+  .upload-zone h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--text3);
+  }
+
+  .upload-zone .filename {
+    display: inline-block;
+    margin-top: 12px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent2);
+    color: var(--accent);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 4px 12px;
+    border-radius: 2px;
+  }
+
+  /* Format hint */
+  .format-hint {
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px;
+  }
+
+  .format-hint p {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .format-hint table {
+    font-size: 12px;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .format-hint th {
+    background: var(--surface2);
+    color: var(--accent);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    text-align: left;
+    border: 1px solid var(--border);
+    font-size: 11px;
+  }
+
+  .format-hint td {
+    padding: 5px 12px;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  /* Controls bar */
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-pill strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .spacer { flex: 1; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    border-color: var(--accent2);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0e0e0f;
+  }
+
+  .btn-primary:hover {
+    background: #d4b87a;
+    border-color: #d4b87a;
+    color: #0e0e0f;
+  }
+
+  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* Class group */
+  .class-group {
+    margin-bottom: 48px;
+  }
+
+  .class-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .class-header h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .class-count {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.06em;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  /* Chart card */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px 20px 20px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .chart-card:hover {
+    border-color: var(--border2);
+  }
+
+  .chart-card .student-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .chart-card .student-class {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .chart-card canvas {
+    display: block;
+    width: 100% !important;
+    height: 200px !important;
+  }
+
+  .scores-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .score-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 5px 4px;
+    text-align: center;
+  }
+
+  .score-chip .strand {
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: 'Barlow Condensed', sans-serif;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .score-chip .val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  /* Error */
+  .error-box {
+    background: rgba(224,85,85,0.1);
+    border: 1px solid rgba(224,85,85,0.3);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--danger);
+    margin-bottom: 20px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--text3);
+  }
+
+  .empty-state h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--text3);
+  }
+
+  .empty-state p { font-size: 13px; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Print styles */
+  @media print {
+    header, .upload-section, .controls-bar, .format-hint, .btn { display: none !important; }
+    body { background: white; color: black; }
+    .class-group { page-break-after: always; }
+    .charts-grid { grid-template-columns: repeat(3, 1fr); }
+    .chart-card {
+      background: white;
+      border: 1px solid #ccc;
+      break-inside: avoid;
+    }
+    .chart-card .student-name { color: black; }
+    .chart-card .student-class { color: #666; }
+    .score-chip { background: #f5f5f5; border-color: #ddd; }
+    .score-chip .strand { color: #888; }
+    .score-chip .val { color: #333; }
+    .class-header h2 { color: black; }
+    .class-count { color: #666; background: #f0f0f0; border-color: #ddd; }
+  }
+
+  @media (max-width: 600px) {
+    main { padding: 20px 16px; }
+    header { padding: 14px 16px; gap: 12px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .controls-bar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <img src="JESS_DT_logo.png" alt="JESS Design &amp; Tech" />
+  </div>
+  <div class="header-divider"></div>
+  <div class="header-title">
+    <h1>Student Progress Radar Charts</h1>
+    <p>Design & Technology — Batch Generator</p>
+  </div>
+  <div class="header-actions" id="headerActions"></div>
+</header>
+
+<main>
+  <div class="upload-section">
+    <div class="section-label">Data Source</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+      <div class="upload-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
+        </svg>
+      </div>
+      <h3>Drop Excel file here or click to browse</h3>
+      <p>Accepts .xlsx, .xls files</p>
+      <div id="filenameTag" style="display:none" class="filename"></div>
+    </div>
+
+    <div class="format-hint" style="margin-top:12px">
+      <p>Expected column format</p>
+      <table>
+        <tr>
+          <th>Student Name</th>
+          <th>Class</th>
+          <th>Investigate</th>
+          <th>Design</th>
+          <th>Make</th>
+          <th>Evaluate</th>
+          <th>Email (optional)</th>
+        </tr>
+        <tr>
+          <td>Aisha Al Mansoori</td>
+          <td>10DT1</td>
+          <td>3</td>
+          <td>4</td>
+          <td>2</td>
+          <td>3</td>
+          <td>aisha@school.ae</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none"></div>
+
+  <div id="controlsBar" class="controls-bar" style="display:none">
+    <div class="stat-pill"><strong id="statStudents">0</strong> students</div>
+    <div class="stat-pill"><strong id="statClasses">0</strong> classes</div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print All
+    </button>
+    <button class="btn btn-primary" onclick="downloadZip()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download All as ZIP
+    </button>
+  </div>
+
+  <div id="chartsOutput"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+const STRANDS = ['Investigate', 'Design', 'Make', 'Evaluate'];
+const LEVELS = { 1: 'Emerging', 2: 'Developing', 3: 'Securing', 4: 'Mastering' };
+const ACCENT = '#FFD100';
+const ACCENT_DIM = 'rgba(255,209,0,0.15)';
+const GRID_COL = 'rgba(255,255,255,0.12)';
+const TICK_COL = 'rgba(255,255,255,0.0)';
+
+let allStudents = [];
+let chartInstances = {};
+
+// --- Upload handling ---
+const zone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  const tag = document.getElementById('filenameTag');
+  tag.textContent = file.name;
+  tag.style.display = 'inline-block';
+  document.getElementById('errorBox').style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      parseData(raw);
+    } catch(err) {
+      showError('Could not read file. Make sure it is a valid Excel file.');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function normaliseKey(k) {
+  return k.toString().toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function findCol(row, candidates) {
+  const keys = Object.keys(row);
+  for (const c of candidates) {
+    const found = keys.find(k => normaliseKey(k) === normaliseKey(c));
+    if (found) return found;
+  }
+  return null;
+}
+
+function parseData(raw) {
+  if (!raw.length) { showError('The spreadsheet appears to be empty.'); return; }
+
+  const sample = raw[0];
+  const nameCol = findCol(sample, ['Student Name', 'Name', 'StudentName', 'student']);
+  const classCol = findCol(sample, ['Class', 'Group', 'Form', 'Year']);
+  const invCol   = findCol(sample, ['Investigate', 'Investigation']);
+  const desCol   = findCol(sample, ['Design', 'Designing']);
+  const makeCol  = findCol(sample, ['Make', 'Making', 'Manufacture']);
+  const evalCol  = findCol(sample, ['Evaluate', 'Evaluation', 'Evaluating']);
+
+  if (!nameCol) { showError('Could not find a "Student Name" column. Check column headings match the expected format.'); return; }
+  if (!invCol || !desCol || !makeCol || !evalCol) { showError('Could not find score columns. Expected: Investigate, Design, Make, Evaluate.'); return; }
+
+  const students = [];
+  raw.forEach((row, i) => {
+    const name = String(row[nameCol] || '').trim();
+    if (!name) return;
+    const cls = classCol ? String(row[classCol] || 'Unassigned').trim() : 'Unassigned';
+    const scores = [
+      clamp(parseFloat(row[invCol]) || 1),
+      clamp(parseFloat(row[desCol]) || 1),
+      clamp(parseFloat(row[makeCol]) || 1),
+      clamp(parseFloat(row[evalCol]) || 1),
+    ];
+    students.push({ name, cls, scores, id: `student-${i}` });
+  });
+
+  if (!students.length) { showError('No valid student rows found.'); return; }
+
+  allStudents = students;
+  renderAll();
+}
+
+function clamp(v) { return Math.min(4, Math.max(1, Math.round(v))); }
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+// --- Render ---
+function renderAll() {
+  // Destroy old charts
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+
+  const output = document.getElementById('chartsOutput');
+  output.innerHTML = '';
+
+  // Group by class
+  const classes = {};
+  allStudents.forEach(s => {
+    if (!classes[s.cls]) classes[s.cls] = [];
+    classes[s.cls].push(s);
+  });
+
+  const classNames = Object.keys(classes).sort();
+
+  // Stats
+  document.getElementById('statStudents').textContent = allStudents.length;
+  document.getElementById('statClasses').textContent = classNames.length;
+  document.getElementById('controlsBar').style.display = 'flex';
+
+  // Header actions
+  document.getElementById('headerActions').innerHTML = `
+    <button class="btn" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print All
+    </button>
+    <button class="btn btn-primary" onclick="downloadZip()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download ZIP
+    </button>
+  `;
+
+  // Legend
+  const legendDiv = document.createElement('div');
+  legendDiv.className = 'legend';
+  legendDiv.innerHTML = [1,2,3,4].map(n => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${levelColor(n)}"></div>
+      ${n} — ${LEVELS[n]}
+    </div>`).join('');
+  output.appendChild(legendDiv);
+
+  // Classes
+  classNames.forEach(cls => {
+    const group = document.createElement('div');
+    group.className = 'class-group';
+    group.id = `class-${cls.replace(/[^a-z0-9]/gi,'_')}`;
+
+    group.innerHTML = `
+      <div class="class-header">
+        <h2>${cls}</h2>
+        <span class="class-count">${classes[cls].length} student${classes[cls].length !== 1 ? 's' : ''}</span>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="printClass('${cls.replace(/'/g,"\\'")}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print ${cls}
+        </button>
+      </div>
+      <div class="charts-grid" id="grid-${cls.replace(/[^a-z0-9]/gi,'_')}"></div>
+    `;
+    output.appendChild(group);
+
+    const grid = group.querySelector('.charts-grid');
+    classes[cls].forEach(student => {
+      const card = buildCard(student);
+      grid.appendChild(card);
+    });
+  });
+
+  // Draw charts after DOM is ready
+  requestAnimationFrame(() => {
+    allStudents.forEach(s => drawChart(s));
+  });
+}
+
+function levelColor(score) {
+  const cols = { 1: '#007BAC', 2: '#4C7BB9', 3: '#FFD100', 4: '#ffde3d' };
+  return cols[score] || ACCENT;
+}
+
+function buildCard(student) {
+  const card = document.createElement('div');
+  card.className = 'chart-card';
+  card.id = `card-${student.id}`;
+
+  const scores = student.scores;
+  const avg = (scores.reduce((a,b)=>a+b,0)/4).toFixed(1);
+
+  card.innerHTML = `
+    <div class="student-name">${student.name}</div>
+    <div class="student-class">${student.cls} &nbsp;&bull;&nbsp; Avg: ${avg}</div>
+    <div style="position:relative;height:200px">
+      <canvas id="canvas-${student.id}" role="img" aria-label="Radar chart for ${student.name}. Investigate: ${scores[0]}, Design: ${scores[1]}, Make: ${scores[2]}, Evaluate: ${scores[3]}."></canvas>
+    </div>
+    <div class="scores-row">
+      ${STRANDS.map((s,i) => `
+        <div class="score-chip">
+          <span class="strand">${s}</span>
+          <span class="val" style="color:${levelColor(scores[i])}">${scores[i]}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  return card;
+}
+
+function drawChart(student) {
+  const canvas = document.getElementById(`canvas-${student.id}`);
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: STRANDS,
+      datasets: [{
+        data: student.scores,
+        backgroundColor: ACCENT_DIM,
+        borderColor: ACCENT,
+        borderWidth: 2,
+        pointBackgroundColor: ACCENT,
+        pointBorderColor: '#0e0e0f',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.raw} — ${LEVELS[ctx.raw] || ''}`
+          },
+          backgroundColor: '#1e1e21',
+          borderColor: '#3a3a44',
+          borderWidth: 1,
+          titleColor: '#e8e8ec',
+          bodyColor: '#FFD100',
+          titleFont: { family: 'Barlow Condensed', size: 12, weight: '600' },
+          bodyFont: { family: 'Barlow', size: 12 },
+          padding: 10,
+        }
+      },
+      scales: {
+        r: {
+          min: 0,
+          max: 4,
+          ticks: {
+            stepSize: 1,
+            display: false,
+          },
+          grid: {
+            color: GRID_COL,
+            lineWidth: 1,
+          },
+          angleLines: { color: GRID_COL, lineWidth: 1 },
+          pointLabels: {
+            color: '#9898a8',
+            font: { family: 'Barlow Condensed', size: 11, weight: '600' },
+            padding: 6,
+          }
+        }
+      }
+    }
+  });
+  chartInstances[student.id] = chart;
+}
+
+// --- Print class ---
+function printClass(cls) {
+  const students = allStudents.filter(s => s.cls === cls);
+  const win = window.open('', '_blank');
+  win.document.write(buildPrintHTML(students, cls));
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
+function buildPrintHTML(students, title) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${title} — JESS DT Progress Charts</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { background:white; font-family:'Barlow',sans-serif; }
+    .page { width:190mm; margin:0 auto; padding:10mm 0; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
+    .page:last-child { page-break-after:auto; }
+    .header { width:100%; display:flex; align-items:center; gap:16px; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:16px; }
+    .header img { height:36px; }
+    .header h2 { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#222; }
+    .header p { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-top:1px; }
+    .student-name { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#111; margin-bottom:2px; }
+    .student-class { font-size:12px; color:#888; letter-spacing:0.05em; margin-bottom:12px; }
+    canvas { display:block; }
+    .scores { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; width:100%; }
+    .chip { background:#f5f5f5; border:1px solid #e0e0e0; border-radius:2px; padding:6px 4px; text-align:center; }
+    .chip .s { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:0.06em; font-family:'Barlow Condensed',sans-serif; display:block; margin-bottom:2px; }
+    .chip .v { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; color:#002454; }
+    .chip .l { font-size:9px; color:#999; letter-spacing:0.03em; }
+    @media print { @page { margin: 8mm; size:A4 portrait; } .page { page-break-after:always; } }
+  </style></head><body>
+  ${students.map(s => `
+  <div class="page">
+    <div class="header">
+      <img src="JESS_DT_logo.png" alt="JESS Design &amp; Tech" style="height:36px;filter:invert(1);" />
+      <div>
+        <h2>Design &amp; Technology</h2>
+        <p>Student Progress Report</p>
+      </div>
+    </div>
+    <div class="student-name">${s.name}</div>
+    <div class="student-class">${s.cls}</div>
+    <div style="position:relative;width:280px;height:280px;margin:0 auto">
+      <canvas id="print-${s.id}" width="280" height="280"></canvas>
+    </div>
+    <div class="scores" style="max-width:340px;margin:12px auto 0">
+      ${STRANDS.map((strand,i)=>`
+        <div class="chip">
+          <span class="s">${strand}</span>
+          <span class="v">${s.scores[i]}</span>
+          <span class="l">${LEVELS[s.scores[i]]}</span>
+        </div>`).join('')}
+    </div>
+  </div>`).join('')}
+  <script>
+    const STRANDS=${JSON.stringify(STRANDS)};
+    const LEVELS=${JSON.stringify(LEVELS)};
+    const students=${JSON.stringify(students)};
+    window.onload=function(){
+      students.forEach(function(s){
+        var canvas=document.getElementById('print-'+s.id);
+        if(!canvas)return;
+        var ctx=canvas.getContext('2d');
+        new Chart(ctx,{
+          type:'radar',
+          data:{
+            labels:STRANDS,
+            datasets:[{
+              data:s.scores,
+              backgroundColor:'rgba(160,128,64,0.15)',
+              borderColor:'#FFD100',
+              borderWidth:2,
+              pointBackgroundColor:'#FFD100',
+              pointBorderColor:'white',
+              pointBorderWidth:2,
+              pointRadius:4
+            }]
+          },
+          options:{
+            responsive:false,
+            animation:{duration:0},
+            plugins:{legend:{display:false},tooltip:{enabled:false}},
+            scales:{r:{min:0,max:4,ticks:{stepSize:1,display:true,backdropColor:'transparent',color:'#888',font:{size:10}},grid:{color:'rgba(0,0,0,0.1)'},angleLines:{color:'rgba(0,0,0,0.1)'},pointLabels:{color:'#333',font:{size:11,weight:'600',family:'Barlow Condensed, sans-serif'}}}}
+          }
+        });
+      });
+    };
+  <\/script>
+  </body></html>`;
+}
+
+// --- ZIP download ---
+async function downloadZip() {
+  if (!allStudents.length) return;
+  const btn = event.target.closest('button');
+  btn.textContent = 'Generating...';
+  btn.disabled = true;
+
+  try {
+    const zip = new JSZip();
+
+    // Group by class
+    const classes = {};
+    allStudents.forEach(s => {
+      if (!classes[s.cls]) classes[s.cls] = [];
+      classes[s.cls].push(s);
+    });
+
+    for (const [cls, students] of Object.entries(classes)) {
+      for (const student of students) {
+        const html = buildSingleStudentHTML(student);
+        const safeName = student.name.replace(/[^a-z0-9 ]/gi, '').trim();
+        const safeCls = cls.replace(/[^a-z0-9 ]/gi, '').trim();
+        zip.file(`${safeCls}/${safeCls}_${safeName}.html`, html);
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'JESS_DT_Progress_Charts.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('ZIP generation failed: ' + e.message);
+  }
+
+  btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download ZIP`;
+  btn.disabled = false;
+}
+
+function buildSingleStudentHTML(student) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${student.name} — DT Progress</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@300;400&display=swap');
+    body{font-family:'Barlow',sans-serif;background:#fff;display:flex;flex-direction:column;align-items:center;padding:20mm;min-height:100vh}
+    .name{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#111;margin-bottom:4px}
+    .cls{font-size:13px;color:#888;margin-bottom:20px;letter-spacing:0.04em}
+    .scores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:320px;margin-top:16px}
+    .chip{background:#f8f8f8;border:1px solid #e0e0e0;border-radius:2px;padding:8px 4px;text-align:center}
+    .chip .s{display:block;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.06em;font-family:'Barlow Condensed',sans-serif;margin-bottom:2px}
+    .chip .v{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#002454}
+    .chip .l{display:block;font-size:9px;color:#aaa}
+    .dept{font-size:11px;color:#bbb;margin-top:24px;letter-spacing:0.06em;text-transform:uppercase}
+  </style></head><body>
+  <div class="name">${student.name}</div>
+  <div class="cls">${student.cls} &mdash; Design &amp; Technology</div>
+  <div style="position:relative;width:320px;height:320px">
+    <canvas id="c" width="320" height="320"></canvas>
+  </div>
+  <div class="scores">
+    ${STRANDS.map((strand,i)=>`<div class="chip"><span class="s">${strand}</span><span class="v">${student.scores[i]}</span><span class="l">${LEVELS[student.scores[i]]}</span></div>`).join('')}
+  </div>
+  <div class="dept">JESS Dubai &mdash; Design &amp; Technology</div>
+  <script>
+    window.onload=function(){
+      new Chart(document.getElementById('c'),{
+        type:'radar',
+        data:{labels:${JSON.stringify(STRANDS)},datasets:[{data:${JSON.stringify(student.scores)},backgroundColor:'rgba(255,209,0,0.15)',borderColor:'#FFD100',borderWidth:2,pointBackgroundColor:'#FFD100',pointBorderColor:'white',pointBorderWidth:2,pointRadius:5}]},
+        options:{responsive:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{r:{min:0,max:4,ticks:{stepSize:1,display:true,backdropColor:'transparent',color:'#888',font:{size:11}},grid:{color:'rgba(0,0,0,0.08)'},angleLines:{color:'rgba(0,0,0,0.08)'},pointLabels:{color:'#333',font:{size:12,weight:'600',family:'Barlow Condensed, sans-serif'}}}}}
+      });
+    };
+  <\/script>
+  </body></html>`;
+}
+
+</script>
+</body>
+</html>
