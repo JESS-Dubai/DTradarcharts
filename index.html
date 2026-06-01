@@ -458,21 +458,24 @@
   /* Print styles */
   @media print {
     header, .upload-section, .controls-bar, .format-hint, .btn { display: none !important; }
-    body { background: white; color: black; }
+    body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .class-group { page-break-after: always; }
     .charts-grid { grid-template-columns: repeat(3, 1fr); }
     .chart-card {
-      background: white;
-      border: 1px solid #ccc;
+      background: white !important;
+      border: 1px solid #ccc !important;
       break-inside: avoid;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    .chart-card .student-name { color: black; }
-    .chart-card .student-class { color: #666; }
-    .score-chip { background: #f5f5f5; border-color: #ddd; }
-    .score-chip .strand { color: #888; }
-    .score-chip .val { color: #333; }
-    .class-header h2 { color: black; }
-    .class-count { color: #666; background: #f0f0f0; border-color: #ddd; }
+    .chart-card .student-name { color: #002454 !important; }
+    .chart-card .student-class { color: #555 !important; }
+    .score-chip { background: #f0f4ff !important; border-color: #c0cce8 !important; }
+    .score-chip .strand { color: #666 !important; }
+    .score-chip .val { color: #002454 !important; }
+    .class-header h2 { color: #002454 !important; }
+    .class-count { color: #555 !important; background: #eef2ff !important; border-color: #c0cce8 !important; }
+    canvas { display: block !important; }
   }
 
   @media (max-width: 600px) {
@@ -843,7 +846,11 @@ function printClass(cls) {
   const win = window.open('', '_blank');
   win.document.write(buildPrintHTML(students, cls));
   win.document.close();
-  win.onload = () => { win.focus(); win.print(); };
+  win.onload = () => {
+      win.focus();
+      // Wait for Chart.js to finish rendering before printing
+      setTimeout(() => { win.print(); }, 1200);
+    };
 }
 
 function buildPrintHTML(students, title) {
@@ -853,21 +860,21 @@ function buildPrintHTML(students, title) {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@300;400;500&display=swap');
     * { box-sizing: border-box; margin:0; padding:0; }
-    body { background:white; font-family:'Barlow',sans-serif; }
+    body { background:white; font-family:'Barlow',sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .page { width:190mm; margin:0 auto; padding:10mm 0; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
     .page:last-child { page-break-after:auto; }
-    .header { width:100%; display:flex; align-items:center; gap:16px; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:16px; }
-    .header img { height:36px; }
-    .header h2 { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#222; }
+    .header { width:100%; display:flex; align-items:center; gap:16px; border-bottom:3px solid #002454; padding-bottom:10px; margin-bottom:16px; }
+    .header img { height:36px; filter:invert(1); background:#002454; padding:4px 8px; border-radius:2px; }
+    .header h2 { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#002454; }
     .header p { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-top:1px; }
-    .student-name { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#111; margin-bottom:2px; }
-    .student-class { font-size:12px; color:#888; letter-spacing:0.05em; margin-bottom:12px; }
+    .student-name { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#002454; margin-bottom:2px; }
+    .student-class { font-size:12px; color:#555; letter-spacing:0.05em; margin-bottom:12px; }
     canvas { display:block; }
     .scores { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; width:100%; }
-    .chip { background:#f5f5f5; border:1px solid #e0e0e0; border-radius:2px; padding:6px 4px; text-align:center; }
-    .chip .s { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:0.06em; font-family:'Barlow Condensed',sans-serif; display:block; margin-bottom:2px; }
-    .chip .v { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; color:#002454; }
-    .chip .l { font-size:9px; color:#999; letter-spacing:0.03em; }
+    .chip { background:#f0f4ff; border:1px solid #c0cce8; border-radius:2px; padding:6px 4px; text-align:center; }
+    .chip .s { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:0.06em; font-family:'Barlow Condensed',sans-serif; display:block; margin-bottom:2px; }
+    .chip .v { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; color:#002454; }
+    .chip .l { font-size:9px; color:#888; letter-spacing:0.03em; }
     @media print { @page { margin: 8mm; size:A4 portrait; } .page { page-break-after:always; } }
   </style></head><body>
   ${students.map(s => `
@@ -999,7 +1006,7 @@ function buildSingleStudentHTML(student) {
     window.onload=function(){
       new Chart(document.getElementById('c'),{
         type:'radar',
-        data:{labels:${JSON.stringify(STRANDS)},datasets:[{data:${JSON.stringify(student.scores)},backgroundColor:'rgba(255,209,0,0.15)',borderColor:'#FFD100',borderWidth:2,pointBackgroundColor:'#FFD100',pointBorderColor:'white',pointBorderWidth:2,pointRadius:5}]},
+        data:{labels:${JSON.stringify(STRANDS)},datasets:[{data:${JSON.stringify(student.scores)},backgroundColor:'rgba(0,36,84,0.08)',borderColor:'#002454',borderWidth:2,pointBackgroundColor:'#002454',pointBorderColor:'white',pointBorderWidth:2,pointRadius:5}]},
         options:{responsive:false,animation:{duration:0},plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{r:{min:0,max:4,ticks:{stepSize:1,display:true,backdropColor:'transparent',color:'#888',font:{size:11}},grid:{color:'rgba(0,0,0,0.08)'},angleLines:{color:'rgba(0,0,0,0.08)'},pointLabels:{color:'#333',font:{size:12,weight:'600',family:'Barlow Condensed, sans-serif'}}}}}
       });
     };
